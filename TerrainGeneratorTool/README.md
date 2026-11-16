@@ -1,54 +1,44 @@
 # Terrain Generator Tool
 
-A Python prototype for creating terrain heightmaps from real-world elevation data. The original goal is to use terrain tools in Unreal Engine with a generated heightmap, followed by a working terrain-generation workflow for Unity as well.
+This project generates terrain height data from real-world geographic elevation sources and turns it into a usable heightmap for downstream workflows. The original intention was an Unreal Engine archviz workflow: build a real-world terrain base from DEM data and then import it into Unreal for visualization, environment blocking, or concept presentation. The same output is also useful for any workflow that needs accurate ground height information from real-world terrain data, not only Unreal.
 
-## Project scope
+## What this project does
 
-The project is intended to:
+The tool takes a center latitude, center longitude, and radius, downloads a DEM from OpenTopography, and converts it into a square grayscale heightmap with supporting metadata. The metadata includes the output dimensions, sample spacing, and the elevation range used to map the height values. In other words, the script turns real geographic elevation data into a heightmap that can be imported into tools that expect a normalized terrain surface.
 
-1. Select an area using a center latitude/longitude and radius.
-2. Download a digital elevation model (DEM) from OpenTopography.
-3. Convert the DEM into a grayscale PNG heightmap and write metadata describing its elevation range and sample spacing.
-4. Make the generated terrain usable in Unreal Engine or Unity (Depending on which one is being used).
+This is most directly useful for Unreal Engine archviz work, where a realistic terrain base can be used as a starting point for environment design, site studies, or visualizations. The process is still generic enough to serve other workflows that need real-world elevation data, such as terrain generation in other engines, GIS-driven modeling, or any project that needs a heightmap derived from actual ground samples.
 
-The current implementation covers the Python download and conversion pipeline. It does **not** yet include an Unreal Engine project, automated Unreal Landscape import, a Unity project, or a Unity terrain importer. See [REQUIREMENTS.md](REQUIREMENTS.md) for scope, status, and acceptance criteria.
+## How it works
 
-## Current status
+The workflow is straightforward:
 
-**Stage: functional Python prototype; engine integration remains future work.**
+1. A target area is defined in `terrain_config.json` using latitude, longitude, and radius.
+2. The script requests a DEM from OpenTopography using the configured dataset and a valid API key.
+3. The DEM is reprojected and resampled into a square heightmap.
+4. A 16-bit PNG is written alongside metadata describing the terrain's source elevation range and sample spacing.
+5. That output can then be used for downstream terrain import or further processing in a target engine or environment.
 
-The pipeline currently:
+At the moment, the implementation is a Python prototype for the acquisition and conversion stages. It does not yet include a full Unreal project, a Unity terrain pipeline, or a verified engine import workflow.
 
-- Reads `dem_center_lat`, `dem_center_lon`, and `dem_radius_km` from `terrain_config.json`.
-- Requests a COP30 DEM from OpenTopography and saves it as a GeoTIFF.
-- Reprojects and resamples the DEM into a square, 16-bit PNG heightmap at one of the configured sample sizes.
-- Writes a companion metadata JSON file with the output dimensions, projected CRS, sample spacing, elevation minimum/maximum, and pixel encoding.
+## What you need to run it
 
-The checked-in output directory contains an example for the configured Mexico City area. Its current metadata reports a 1009 × 1009 heightmap. Generated data may need to be regenerated when the configuration or pipeline changes.
-
-## Requirements
-
-- Python 3.11.9 is the version currently tested.
-- Python packages: `numpy` and `rasterio`. `requests` is optional; the downloader has a standard-library HTTP fallback.
-- Network access and a valid OpenTopography API key are needed to download a DEM. Conversion and tests can be run with an existing DEM without making a DEM request.
-
-Install the packages in your Python environment:
+To run the prototype successfully, the machine needs Python 3.11.x, the required Python libraries, network access, and a valid OpenTopography API key. The required packages are installed with:
 
 ```powershell
 python -m pip install numpy rasterio requests
 ```
 
-Set the API key in the current PowerShell session before running the downloader:
+Then set the OpenTopography API key in the current shell before running the downloader:
 
 ```powershell
 $env:OPENTOPOGRAPHY_API_KEY = "your-key"
 ```
 
-Do not commit API keys or other credentials. The downloader also contains a machine-specific fallback key-file path; that fallback should be configured or removed as part of making the project portable.
+The script also contains a machine-specific fallback key-file path that should be replaced or configured before moving the project to another machine. Do not commit API keys or other credentials into the repository.
 
 ## Configure and run
 
-Edit `terrain_config.json` to select the area:
+Edit `terrain_config.json` to choose the target area:
 
 ```json
 {
@@ -58,27 +48,28 @@ Edit `terrain_config.json` to select the area:
 }
 ```
 
-Run the end-to-end pipeline from the project directory:
+Then run the pipeline from the project directory:
 
 ```powershell
 python TerrainGenerator.py
 ```
 
-The current script writes the DEM, heightmap, and metadata into `output\`. Its output paths are currently hard-coded in `TerrainGenerator.py`, so running it in another location may require updating those paths first.
+The current script writes the output into `output\`. Those paths are still hard-coded in the script, so running the project from a different machine or location may require updating them first.
 
-## Generated files
+## Current project stage
 
-- `output\mexico_terrain.tif` — downloaded source elevation model.
-- `output\mexico_terrain_heightmap.png` — 16-bit grayscale height samples.
-- `output\mexico_terrain_heightmap_metadata.json` — dimensions, CRS, sample spacing, elevation range, and encoding details.
+This is currently a Python-only prototype focused on the data acquisition and heightmap conversion pipeline. It successfully loads the configuration, downloads a DEM, processes it into a square 16-bit terrain heightmap, and writes metadata for the generated output. The checked-in `output\` folder contains an example heightmap for the configured Mexico City area.
 
-The PNG maps the source elevation range linearly: pixel value `0` represents the reported minimum elevation and `65535` represents the maximum. Use the metadata when configuring vertical terrain scale in an engine; the correct engine-specific scale/import settings have not yet been implemented or verified.
+The project is still intended primarily for Unreal Engine archviz work, but the same generated terrain data can also be useful in other scenarios that need real-world height information. Engine-specific import workflows, scale calibration, and final integration steps remain future work.
 
-## Repository guide
+## Project structure
 
-- `TerrainGenerator.py` — pipeline entry point and configuration loading.
-- `opentopography_api.py` — DEM request and download.
-- `heightmap.py` — GeoTIFF reprojection, resampling, heightmap, and metadata generation.
-- `terrain_config.json` — current area settings.
-- `output\` — sample generated terrain data.
+The project is intentionally organized as a modular script, with each part of the workflow kept in a separate module:
 
+- `TerrainGenerator.py` loads the configuration and orchestrates the pipeline.
+- `opentopography_api.py` handles DEM requests and downloads.
+- `heightmap.py` handles reprojection, resampling, and heightmap/metadata generation.
+- `terrain_config.json` stores the current target area.
+- `output\` contains example generated terrain assets.
+
+Keep this modular structure as the project grows. New data sources, export formats, engine integrations, or other applications should be added as separate components around the shared terrain-processing workflow, rather than combining unrelated responsibilities into one script. This makes it easier to reuse the real-world height data pipeline for future workflows while keeping existing behavior maintainable.
