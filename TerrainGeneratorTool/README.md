@@ -23,7 +23,6 @@ The pipeline currently:
 - Requests a COP30 DEM from OpenTopography and saves it as a GeoTIFF.
 - Reprojects and resamples the DEM into a square, 16-bit PNG heightmap at one of the configured sample sizes.
 - Writes a companion metadata JSON file with the output dimensions, projected CRS, sample spacing, elevation minimum/maximum, and pixel encoding.
-- Has five passing unit tests for configuration loading, request construction, bounds calculation, conversion, and pipeline order.
 
 The checked-in output directory contains an example for the configured Mexico City area. Its current metadata reports a 1009 × 1009 heightmap. Generated data may need to be regenerated when the configuration or pipeline changes.
 
@@ -75,22 +74,11 @@ The current script writes the DEM, heightmap, and metadata into `output\`. Its o
 
 The PNG maps the source elevation range linearly: pixel value `0` represents the reported minimum elevation and `65535` represents the maximum. Use the metadata when configuring vertical terrain scale in an engine; the correct engine-specific scale/import settings have not yet been implemented or verified.
 
-## Tests
-
-Run the current unit tests with:
-
-```powershell
-python -m unittest -v test_terrain_pipeline.py
-```
-
-The tests cover the Python data pipeline only. They do not test importing or rendering a terrain in Unreal Engine or Unity.
-
 ## Repository guide
 
 - `TerrainGenerator.py` — pipeline entry point and configuration loading.
 - `opentopography_api.py` — DEM request and download.
 - `heightmap.py` — GeoTIFF reprojection, resampling, heightmap, and metadata generation.
 - `terrain_config.json` — current area settings.
-- `test_terrain_pipeline.py` — Python unit tests.
 - `output\` — sample generated terrain data.
 
