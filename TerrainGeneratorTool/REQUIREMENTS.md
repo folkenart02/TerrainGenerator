@@ -30,86 +30,36 @@ The Python prototype currently implements the first three steps. Engine-specific
 - FBX/USD export; these were considered possible future alternatives, not current requirements.
 - A finished Unreal or Unity integration; neither is present in the current project.
 
-## 3. Functional requirements
+## 3. Required environment and access
 
-| ID | Requirement | Status |
-|---|---|---|
-| FR-01 | Read center latitude, center longitude, and radius from a JSON configuration file. | Implemented |
-| FR-02 | Validate numeric settings and geographic bounds before constructing a radius-based request. | Partially implemented: values are checked for numeric type; geographic and radius constraints are checked when calculating bounds. |
-| FR-03 | Download a GeoTIFF DEM from OpenTopography using a configured dataset and API key. | Implemented |
-| FR-04 | Reproject DEM elevation data and resample it to a supported square heightmap size. | Implemented |
-| FR-05 | Write a 16-bit grayscale PNG whose normalized values map the elevation minimum to 0 and maximum to 65535. | Implemented |
-| FR-06 | Write companion metadata containing dimensions, CRS, sample spacing, elevation range, and encoding. | Implemented |
-| FR-07 | Import the generated heightmap into an Unreal Engine Landscape and provide correct horizontal/vertical scale guidance. | Not implemented or engine-validated |
-| FR-08 | Provide a working Unity terrain path, including heightmap import and correct terrain dimensions/elevation scaling. | Not implemented or engine-validated |
-| FR-09 | Provide clear actionable errors for invalid input, missing credentials, failed downloads, and unsupported or invalid DEM data. | Implemented in the Python pipeline; engine error handling remains undefined |
-| FR-10 | Make configuration and output locations usable on other machines without editing machine-specific source paths. | Not yet implemented; output and fallback key-file paths are currently machine-specific |
+To run the prototype successfully, the machine must have:
 
-## 4. Non-functional requirements
+- Python 3.11.x installed.
+- The `numpy` and `rasterio` packages installed in the active Python environment.
+- `requests` installed only if you want the downloader to use the optional requests-based HTTP client; otherwise the standard library fallback is used.
+- Network access to the public OpenTopography API endpoints.
+- An OpenTopography account with a valid API key.
+- A value for `OPENTOPOGRAPHY_API_KEY` in the environment, or a valid key file location configured for the script.
 
-- Preserve enough elevation precision for terrain import by using 16-bit height values.
-- Keep metadata alongside each generated heightmap to retain its elevation range and sample spacing.
-- Do not store API credentials in source control or generated documentation.
-- Verify pipeline behavior with automated tests and separately verify engine import in each target engine.
-- Document tested Python and engine versions as engine integrations are added.
+Install the required Python packages:
 
-## 5. Current implementation and project stage
+```powershell
+python -m pip install numpy rasterio requests
+```
 
-**Current stage: Python pipeline prototype; Unreal/Unity integration phase has not started.**
+Set the API key in the current shell before running the downloader:
 
-Implemented in the repository:
+```powershell
+$env:OPENTOPOGRAPHY_API_KEY = "your-key"
+```
 
-- `TerrainGenerator.py` loads the JSON settings and runs download followed by conversion.
-- `opentopography_api.py` calculates geographic bounds and downloads a GeoTIFF from OpenTopography's Global DEM API.
-- `heightmap.py` reprojects the DEM into a local UTM CRS, fills missing samples, resamples to a supported square size, writes a 16-bit PNG, and writes metadata.
-- `test_terrain_pipeline.py` tests the configuration, bounds, download request, conversion output, and pipeline sequence.
-- The project is currently tested with Python 3.11.9. The current unit test suite passes five tests.
-- Existing sample outputs in `output\` include a 1009 × 1009 PNG heightmap for the configured area near Mexico City.
+If you do not want to set the environment variable, the script also checks a machine-specific key-file fallback path in `opentopography_api.py`. That fallback is not portable and should be replaced with a project-relative or user-specific configuration before using the project on another machine.
 
-Not implemented or verified:
+To get an API key, create an account on OpenTopography and generate a personal API key from the portal. The downloaded DEM request will fail without a valid key.
 
-- Unreal project setup and repeatable Landscape import instructions.
-- Unreal Landscape component/layout choices, vertical scale calculation, and visual validation.
-- Unity project setup, terrain creation/import, vertical and horizontal scale mapping, and visual validation.
-- Portable configuration for output paths and the OpenTopography key-file fallback.
-- A documented strategy for areas that exceed the size supported by one generated heightmap.
+## 4. Current implementation and project stage
 
-## 6. Engine-specific requirements
+The project is currently a Python-only terrain-generation prototype. The script loads the configured target area, requests a DEM from OpenTopography using a valid API key, converts that DEM into a square 16-bit grayscale heightmap, and writes companion metadata describing the elevation range and sample spacing. In the repository, `TerrainGenerator.py` orchestrates the pipeline, `opentopography_api.py` handles the DEM request and geographic bounds, and `heightmap.py` handles reprojection, resampling, PNG export, and metadata generation. The sample output in `output\` already contains a generated Mexico City heightmap, so the pipeline has been validated on the current configuration.
 
-### Unreal Engine
+Unreal and Unity integration work is still not implemented or tested in this repository. The current prototype does not yet include a reproducible in-engine terrain import workflow, engine-specific scale settings, or a Unity project. The code still includes machine-specific output and API-key fallback paths that need to be made portable before the project can be used cleanly on another machine.
 
-The Unreal milestone should demonstrate that a generated heightmap can be imported with the engine's terrain tools to create a Landscape. It should document the tested Unreal version, supported heightmap dimensions, Landscape component settings, horizontal scale, and how the metadata's elevation range is used to set vertical scale. The pipeline currently writes a PNG, but a successful engine import has not been demonstrated by this repository.
-
-### Unity
-
-The Unity milestone should demonstrate terrain creation from generated elevation data in a Unity project. It should document the tested Unity version, any required conversion/import format, heightmap resolution constraints, terrain dimensions, and how minimum/maximum elevation and sample spacing map to Unity terrain size and height. No Unity-specific code or project is currently present.
-
-The implementations should use consistent geographic input and elevation meaning. The exact sharing strategy (same PNG, an intermediate format, or engine-specific exports) remains to be decided and validated during the engine integration work.
-
-## 7. Acceptance criteria
-
-The Python pipeline milestone is accepted when:
-
-- A valid configuration produces a GeoTIFF, a 16-bit grayscale PNG, and a metadata JSON.
-- Invalid configuration, missing credentials, invalid DEM data, and unsupported output dimensions report a useful error rather than silently producing success.
-- Automated tests cover configuration, download request setup, conversion properties, and pipeline order.
-
-The Unreal milestone is accepted when:
-
-- A documented, reproducible import workflow creates a Landscape from a generated heightmap.
-- Terrain dimensions and elevation scaling can be reconstructed from configuration and metadata.
-- The workflow is tested in a named Unreal Engine version and produces a visually inspected terrain.
-
-The Unity milestone is accepted when:
-
-- A documented, reproducible workflow creates a Unity Terrain from generated elevation data.
-- Terrain dimensions and elevation scaling can be reconstructed from configuration and metadata.
-- The workflow is tested in a named Unity version and produces a visually inspected terrain.
-
-## 8. Suggested next steps
-
-1. Make API key and output path configuration portable, then document a clean setup on a second machine.
-2. Choose and test the Unreal Engine version and Landscape import settings; verify dimensions and elevation scaling using the metadata.
-3. Choose and test the Unity version and a heightmap import workflow with equivalent terrain dimensions and elevation scale.
-4. Add engine-level validation steps or small integration tests/examples for both workflows.
-5. Decide how to handle oversized areas (reject clearly, split into tiles, or allow configurable output resolution).
