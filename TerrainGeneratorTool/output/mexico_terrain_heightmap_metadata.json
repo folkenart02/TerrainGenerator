@@ -1,0 +1,11 @@
+{
+  "source_dem": "F:\\Unreal_Python\\TerrainGeneratorTool\\output\\mexico_terrain.tif",
+  "heightmap": "F:\\Unreal_Python\\TerrainGeneratorTool\\output\\mexico_terrain_heightmap.png",
+  "width_samples": 1009,
+  "height_samples": 1009,
+  "crs": "EPSG:32614",
+  "sample_spacing_m": 19.86005792688495,
+  "minimum_elevation_m": 2221.259033203125,
+  "maximum_elevation_m": 2501.628173828125,
+  "encoding": "uint16: 0 is minimum_elevation_m; 65535 is maximum_elevation_m"
+}
